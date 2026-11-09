@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FortiHoot — Test bots &amp; security check</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cpath d=%22M32 3 58 13v18c0 15-11 25-26 30C17 56 6 46 6 31V13z%22 fill=%22%2317191d%22 stroke=%22%23cfa768%22 stroke-width=%224%22/%3E%3Cpath d=%22M20 22h24l-4 22H24z%22 fill=%22%23cc2027%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .fields{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .botgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:5px;margin-top:12px}
+  .bot{font-size:11.5px;font-weight:600;border-radius:7px;padding:5px 7px;background:#eee;border:1px solid #ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bot.join{background:#f1ecdf}.bot.wait{background:#e7eef9;border-color:#c5d4ee}.bot.ans{background:#e7f4ec;border-color:#bfe0cb}.bot.err{background:#fbeeec;border-color:#e6bdb9;color:#8e1b1f}
+  .sum{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-weight:700}
+  table.chk{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px}
+  table.chk th{background:var(--header-bg);color:var(--gold);text-align:left;padding:6px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  table.chk td{padding:6px 8px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  .pass{color:var(--ok);font-weight:800}.fail{color:var(--accent);font-weight:800}
+  @media (max-width:900px){.row2{grid-template-columns:1fr}.fields{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body class="spartan-bg">
+<header class="sq-head">
+  <span class="brand-logo"><img src="img/fortinet-logo.png" alt="Fortinet"></span>
+  <span class="app-name" data-app-name>FortiHoot</span>
+  <span class="sq-title">Test bots &amp; security check</span>
+</header>
+<main class="wrap">
+  <div class="row2">
+    <div class="card">
+      <h3>Load test: fake players</h3>
+      <p class="small muted" style="margin-top:0">Create a test game on the host page, paste its code here, and start bots. Bots answer at random (they can't see the answer key). Use about 25 bots per browser tab; open more tabs for more bots.</p>
+      <div class="fields">
+        <div><label class="lbl" for="bCode">Game code</label><input id="bCode" type="text" class="mono" maxlength="6"></div>
+        <div><label class="lbl" for="bCount">Bots</label><input id="bCount" type="number" min="1" max="60" value="25"></div>
+        <div><label class="lbl" for="bMin">Fastest (s)</label><input id="bMin" type="number" min="0" max="60" value="1"></div>
+        <div><label class="lbl" for="bMax">Slowest (s)</label><input id="bMax" type="number" min="1" max="120" value="12"></div>
+      </div>
+      <label class="lbl" for="bPrefix">Bot name prefix (use a different one in each tab)</label>
+      <input id="bPrefix" type="text" maxlength="10" value="Bot A">
+      <div style="display:flex;gap:10px;margin-top:14px"><button id="bStart" class="btn primary">Start bots</button><button id="bStop" class="btn" disabled>Stop bots</button></div>
+      <div class="sum"><span>Joined: <span id="sJoined">0</span></span><span>Answered this question: <span id="sAns">0</span></span><span>Errors: <span id="sErr">0</span></span></div>
+      <p class="tiny muted">Firebase allows 100 new sign-ins per hour from one network. Bots keep their identity in this browser, so later runs reuse them. For 150 bots the first time, run 90 here and the rest from a second computer or a phone hotspot.</p>
+      <div id="botGrid" class="botgrid"></div>
+    </div>
+    <div class="card">
+      <h3>Security check</h3>
+      <p class="small muted" style="margin-top:0">Proves your published rules block cheating. Create a throwaway test game (lobby is fine), paste its code and run the check. It joins as a player named "Security check" — remove it or cancel the game afterward.</p>
+      <label class="lbl" for="cCode">Game code</label>
+      <input id="cCode" type="text" class="mono" maxlength="6" style="max-width:200px">
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button id="cRun" class="btn dark">Run security check</button><button id="cRunQ" class="btn">Run answer checks (start question 1 first)</button></div>
+      <div id="cOut"></div>
+    </div>
+  </div>
+</main>
+<div class="foot"><span data-app-name>FortiHoot</span> · v<span id="ver"></span></div>
+
+<script src="config.js"></script>
+<script type="module">
+import { openStore, SERVER_TIME, syncClock, errText } from "./js/store.js";
+import * as C from "./js/core.js";
+import { $, esc, toast, brandHeader } from "./js/ui.js";
+const cfg = window.QUIZ_CONFIG || {};
+brandHeader(cfg);
+$("#ver").textContent = C.APP_VERSION;
+const qp = new URLSearchParams(location.search);
+if (qp.get("code")) { $("#bCode").value = qp.get("code"); $("#cCode").value = qp.get("code"); }
+if (qp.get("n")) $("#bCount").value = qp.get("n");
+if (qp.get("prefix")) $("#bPrefix").value = qp.get("prefix");
+
+// ---------------- bots ----------------
+const bots = [];
+let running = false;
+function paint() {
+  $("#botGrid").innerHTML = bots.map(b => `<div class="bot ${b.cls}" title="${esc(b.note || "")}">${esc(b.name)}</div>`).join("");
+  $("#sJoined").textContent = bots.filter(b => b.joined).length;
+  const q = Math.max(-1, ...bots.map(b => b.q ?? -1));
+  $("#sAns").textContent = bots.filter(b => b.answered === q && q >= 0).length;
+  $("#sErr").textContent = bots.filter(b => b.cls === "err").length;
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function runBot(b, code, minS, maxS) {
+  try {
+    b.cls = "join"; paint();
+    b.store = await openStore(cfg, { appName: "bot-" + b.key });
+    b.uid = await b.store.signInPlayer();
+    const c = await b.store.get(`codes/${code}`);
+    if (!c || !c.active) throw new Error("code not active");
+    b.gameId = c.game;
+    const path = `games/${c.game}/players/${b.uid}`;
+    const existing = await b.store.get(path);
+    if (existing) b.offset = await syncClock(b.store, path, "seen", () => b.store.update(path, { seen: SERVER_TIME }));
+    else b.offset = await syncClock(b.store, path, "joinedAt", () => b.store.set(path, { name: b.name, team: c.team ?? null, code, joinedAt: SERVER_TIME }));
+    b.joined = true; b.cls = "wait"; paint();
+    b.unsub = b.store.watch(`games/${c.game}`, async g => {
+      if (!g || !running) return;
+      if (g.status === "ended") { b.cls = "wait"; b.note = "game ended"; paint(); return; }
+      if (g.status !== "question" || b.answered === g.qIndex || b.pendingQ === g.qIndex) { if (g.status === "question") b.q = g.qIndex; return; }
+      const i = g.qIndex; b.q = i; b.pendingQ = i; b.cls = "wait"; paint();
+      const left = C.remainingMs(g.qStart, g.q.time, b.offset);
+      const delay = Math.min(left - 400, (minS + Math.random() * Math.max(0, maxS - minS)) * 1000);
+      if (delay < 0) return;
+      await sleep(delay);
+      if (!running) return;
+      const n = g.q.options.length;
+      let choice = [Math.floor(Math.random() * n)];
+      if (g.q.type === "multi") { choice = [...Array(n).keys()].filter(() => Math.random() < 0.5); if (!choice.length) choice = [0]; }
+      try { await b.store.set(`games/${b.gameId}/answers/${i}_${b.uid}`, { u: b.uid, q: i, c: choice, at: SERVER_TIME }); b.answered = i; b.cls = "ans"; b.note = ""; }
+      catch (e) { b.note = errText(e); if (e.code !== "permission-denied") b.cls = "err"; }
+      paint();
+    }, e => { b.cls = "err"; b.note = errText(e); paint(); });
+  } catch (e) { b.cls = "err"; b.note = errText(e); paint(); console.warn(b.name, e); }
+}
+$("#bStart").addEventListener("click", async () => {
+  const code = C.normalizeCode($("#bCode").value);
+  if (!C.isValidCode(code)) return toast("Enter a valid 6-character code.");
+  const n = Math.min(60, Math.max(1, Number($("#bCount").value) || 1));
+  const minS = Math.max(0, Number($("#bMin").value) || 0), maxS = Math.max(minS, Number($("#bMax").value) || minS);
+  const prefix = C.cleanName($("#bPrefix").value) || "Bot";
+  running = true; $("#bStart").disabled = true; $("#bStop").disabled = false;
+  const key = prefix.replace(/[^\w]/g, "").toLowerCase() || "bot";
+  for (let i = 1; i <= n; i++) { const b = { name: `${prefix} ${i}`, key: `${key}-${i}`, cls: "", joined: false, answered: -1 }; bots.push(b); }
+  paint();
+  for (const b of bots.filter(x => !x.store)) { runBot(b, code, minS, maxS); await sleep(120); }
+});
+$("#bStop").addEventListener("click", () => { running = false; for (const b of bots) { b.unsub && b.unsub(); } $("#bStop").disabled = true; toast("Bots stopped. Reload the page to start again."); });
+
+// ---------------- security check ----------------
+function table(rows) {
+  const pass = rows.filter(r => r.ok).length;
+  $("#cOut").innerHTML = `<p style="margin:12px 0 0;font-weight:800" class="${pass === rows.length ? "pass" : "fail"}">${pass} of ${rows.length} checks passed${pass === rows.length ? " — your rules are working." : " — see the FAIL rows. Re-paste firebase/firestore.rules and Publish."}</p><table class="chk"><thead><tr><th>Check</th><th>Expected</th><th>Result</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${r.expect}</td><td class="${r.ok ? "pass" : "fail"}">${r.ok ? "PASS" : "FAIL"} <span class="muted small">${esc(r.detail || "")}</span></td></tr>`).join("")}</tbody></table>`;
+}
+async function attempt(fn) { try { await fn(); return { allowed: true }; } catch (e) { return { allowed: false, code: e.code || "", msg: errText(e) }; } }
+function listAttempt(store, col, filters = []) {
+  return new Promise(res => {
+    let done = false;
+    const un = store.watchQuery(col, filters, () => { if (!done) { done = true; res({ allowed: true }); setTimeout(() => un && un(), 0); } }, e => { if (!done) { done = true; res({ allowed: false, code: e.code || "" }); } });
+    setTimeout(() => { if (!done) { done = true; res({ allowed: false, code: "timeout" }); } }, 8000);
+  });
+}
+let sec = null;
+async function secSetup(code) {
+  if (!sec) { sec = { store: await openStore(cfg, { appName: "security-check" }) }; sec.uid = await sec.store.signInPlayer(); }
+  sec.code = code;
+  sec.c = await sec.store.get(`codes/${code}`);
+  if (!sec.c) throw new Error("That code isn't active.");
+  sec.g = await sec.store.get(`games/${sec.c.game}`);
+  return sec;
+}
+$("#cRun").addEventListener("click", async () => {
+  const code = C.normalizeCode($("#cCode").value);
+  if (!C.isValidCode(code)) return toast("Enter a valid 6-character code.");
+  $("#cRun").disabled = true; $("#cOut").innerHTML = `<p class="muted">Running…</p>`;
+  const rows = [];
+  const deny = (name, r) => rows.push({ name, expect: "Blocked", ok: !r.allowed && r.code === "permission-denied", detail: r.allowed ? "was allowed!" : r.code });
+  const allow = (name, r) => rows.push({ name, expect: "Allowed", ok: r.allowed, detail: r.allowed ? "" : r.msg });
+  try {
+    const s = await secSetup(code), st = s.store, gid = s.c.game, me = s.uid, other = "someoneElse0000000000000000a";
+    allow("Player can read a join code", { allowed: true });
+    allow("Player can read the game", await attempt(() => st.get(`games/${gid}`)));
+    deny("Read the answer key", await attempt(() => st.get(`games/${gid}/private/key`)));
+    deny("List all players", await listAttempt(st, `games/${gid}/players`));
+    deny("List all answers", await listAttempt(st, `games/${gid}/answers`));
+    deny("List all join codes", await listAttempt(st, `codes`));
+    deny("List all games", await listAttempt(st, `games`));
+    deny("List another host's games", await listAttempt(st, `games`, [["hostUid", "==", other]]));
+    deny("List someone's co-host invitations", await listAttempt(st, `cohosts`, [["email", "==", "someone@example.com"]]));
+    deny("Make yourself a co-host", await attempt(() => st.set(`cohosts/${gid}_someone@example.com`, { game: gid, email: "someone@example.com", title: "x", by: me })));
+    deny("Close the join code", await attempt(() => st.update(`codes/${code}`, { active: false })));
+    deny("Change the game (e.g. jump to the end)", await attempt(() => st.update(`games/${gid}`, { status: "ended" })));
+    deny("Create a game without being a host", await attempt(() => st.set(`games/${st.newId()}`, { hostUid: me, title: "x", status: "lobby" })));
+    deny("Create a join code without being a host", await attempt(() => st.set(`codes/${C.makeCode()}`, { game: gid, team: null, host: me, active: true })));
+    deny("Join under someone else's ID", await attempt(() => st.set(`games/${gid}/players/${other}`, { name: "Imposter", team: s.c.team ?? null, code, joinedAt: SERVER_TIME })));
+    deny("Join with a fake team", await attempt(() => st.set(`games/${gid}/players/${me}`, { name: "Security check", team: s.c.team ? null : "t9", code, joinedAt: SERVER_TIME })));
+    deny("Join with a made-up time stamp", await attempt(() => st.set(`games/${gid}/players/${me}`, { name: "Security check", team: s.c.team ?? null, code, joinedAt: 1 })));
+    const existing = await st.get(`games/${gid}/players/${me}`);
+    if (!existing) allow("Join normally", await attempt(() => st.set(`games/${gid}/players/${me}`, { name: "Security check", team: s.c.team ?? null, code, joinedAt: SERVER_TIME })));
+    else allow("Join normally (already joined earlier)", { allowed: true });
+    deny("Rename yourself after joining", await attempt(() => st.update(`games/${gid}/players/${me}`, { name: "Renamed" })));
+    deny("Switch teams after joining", await attempt(() => st.update(`games/${gid}/players/${me}`, { team: "t9" })));
+    deny("Read another player's record", await attempt(() => st.get(`games/${gid}/players/${other}`)));
+    const g = await st.get(`games/${gid}`);
+    if (g.status !== "question") deny("Answer when no question is open", await attempt(() => st.set(`games/${gid}/answers/0_${me}`, { u: me, q: 0, c: [0], at: SERVER_TIME })));
+    deny("Answer as someone else", await attempt(() => st.set(`games/${gid}/answers/${Math.max(0, g.qIndex)}_${other}`, { u: other, q: Math.max(0, g.qIndex), c: [0], at: SERVER_TIME })));
+    deny("Answer with a made-up time stamp", await attempt(() => st.set(`games/${gid}/answers/${Math.max(0, g.qIndex)}_${me}`, { u: me, q: Math.max(0, g.qIndex), c: [0], at: 1 })));
+  } catch (e) { rows.push({ name: "Setup", expect: "Works", ok: false, detail: errText(e) }); }
+  table(rows); $("#cRun").disabled = false;
+});
+$("#cRunQ").addEventListener("click", async () => {
+  const code = C.normalizeCode($("#cCode").value);
+  if (!C.isValidCode(code)) return toast("Enter a valid 6-character code.");
+  const rows = [];
+  $("#cOut").innerHTML = `<p class="muted">Running…</p>`;
+  try {
+    const s = await secSetup(code), st = s.store, gid = s.c.game, me = s.uid;
+    if (!(await st.get(`games/${gid}/players/${me}`))) throw new Error("Run the security check first (it joins the game).");
+    const g = await st.get(`games/${gid}`);
+    if (g.status !== "question") throw new Error("Start a question on the host page first, then run this within its time limit.");
+    const i = g.qIndex;
+    const r0 = await attempt(() => st.set(`games/${gid}/answers/${i + 1}_${me}`, { u: me, q: i + 1, c: [0], at: SERVER_TIME }));
+    rows.push({ name: "Answer a question that isn't open yet", expect: "Blocked", ok: !r0.allowed, detail: r0.code });
+    const r1 = await attempt(() => st.set(`games/${gid}/answers/${i}_${me}`, { u: me, q: i, c: [0], at: SERVER_TIME }));
+    rows.push({ name: "Answer the open question", expect: "Allowed", ok: r1.allowed, detail: r1.allowed ? "" : r1.msg + " (already answered or time ran out?)" });
+    const r2 = await attempt(() => st.set(`games/${gid}/answers/${i}_${me}`, { u: me, q: i, c: [1], at: SERVER_TIME }));
+    rows.push({ name: "Change that answer", expect: "Blocked", ok: !r2.allowed, detail: r2.code });
+    const r3 = await attempt(() => st.get(`games/${gid}/answers/${i}_${me}`));
+    rows.push({ name: "Read back your own answer", expect: "Allowed", ok: r3.allowed, detail: r3.allowed ? "" : r3.msg });
+  } catch (e) { rows.push({ name: "Setup", expect: "Works", ok: false, detail: errText(e) }); }
+  table(rows);
+});
+</script>
+</body>
+</html>

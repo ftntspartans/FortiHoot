@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FortiHoot — Host</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cpath d=%22M32 3 58 13v18c0 15-11 25-26 30C17 56 6 46 6 31V13z%22 fill=%22%2317191d%22 stroke=%22%23cfa768%22 stroke-width=%224%22/%3E%3Cpath d=%22M20 22h24l-4 22H24z%22 fill=%22%23cc2027%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;align-items:start}
+  .drop{border:2px dashed var(--gold-dark);border-radius:12px;padding:22px;text-align:center;background:var(--gold-tint);cursor:pointer}
+  .drop.over{background:#efe2c4}
+  .prev{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  .prev th{background:var(--header-bg);color:var(--gold);text-align:left;padding:6px 8px;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+  .prev td{padding:6px 8px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  .prev tr:nth-child(even) td{background:var(--surface-2)}
+  .prevwrap{max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:9px;margin-top:8px}
+  .issues{margin:8px 0 0;padding-left:20px;font-size:13.5px} .issues li{margin:3px 0}
+  .radio{display:flex;gap:10px;align-items:flex-start;margin:6px 0;cursor:pointer}
+  .radio input{margin-top:4px}
+  .check{display:flex;gap:9px;align-items:flex-start;margin:9px 0;cursor:pointer;font-size:14.5px}
+  .check input{margin-top:3px}
+  .teamnames{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .teamnames div{display:flex;align-items:center;gap:7px}
+  .glist .grow-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+  .glist .grow-row:first-child{border-top:none}
+  .cohostbox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:12px;border-top:1px solid var(--line-soft);font-size:14px}
+  .cohostlist{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .cohostlist .pchip{font-size:13px}
+  .codebig{font-size:64px;font-weight:900;letter-spacing:10px;color:var(--header-bg);line-height:1}
+  .joinurl{font-size:20px;font-weight:700;word-break:break-all}
+  .teamcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .tcard{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+  .tcard .bar{height:8px}
+  .tcard .in{padding:12px 14px}
+  .tcard .code{font-size:30px;font-weight:900;letter-spacing:5px}
+  .plist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .pchip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 11px;font-size:14px;font-weight:600}
+  .pchip button{border:none;background:transparent;color:var(--mut);cursor:pointer;border-radius:999px;padding:0 7px;font-weight:700}
+  .pchip button:hover{background:var(--bad-tint);color:var(--accent-dark)}
+  .pchip button.arm{background:var(--accent);color:#fff}
+  .livebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .livebar .qn{font-weight:800;color:var(--accent-dark);text-transform:uppercase;letter-spacing:.05em}
+  .livebar .grow{flex:1;min-width:120px}
+  .presq{font-size:30px;font-weight:800;line-height:1.25;margin:0}
+  .qimg{display:block;max-width:100%;max-height:30vh;margin:12px auto 0;border-radius:10px}
+  .ans .count{margin-left:auto;font-size:26px;font-weight:900;background:rgba(0,0,0,.18);border-radius:10px;padding:2px 12px}
+  .ans .meter{position:absolute;left:0;bottom:0;height:6px;background:rgba(255,255,255,.75);border-radius:0 0 0 12px}
+  .controls{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+  .answered{font-weight:800;font-size:18px}
+  .podium{display:flex;align-items:flex-end;justify-content:center;gap:14px;margin:18px 0 10px}
+  .podium .step{width:180px;text-align:center}
+  .podium .blk{border-radius:12px 12px 0 0;color:#fff;font-weight:900;font-size:34px;display:flex;align-items:center;justify-content:center}
+  .podium .nm{font-weight:800;font-size:18px;margin-bottom:4px;word-break:break-word}
+  .podium .sc{color:var(--mut);font-weight:700;margin-bottom:6px}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:#fff;border-left:1px solid var(--line);box-shadow:-10px 0 30px rgba(0,0,0,.15);z-index:40;padding:18px;overflow:auto;transform:translateX(105%);transition:transform .2s}
+  .drawer.open{transform:none}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr}.codebig{font-size:44px}}
+</style>
+</head>
+<body class="host spartan-bg">
+<header class="sq-head">
+  <span class="brand-logo"><img src="img/fortinet-logo.png" alt="Fortinet"></span>
+  <span class="app-name" data-app-name>FortiHoot</span>
+  <span class="sq-title">Host console</span>
+  <div class="right"><span id="roleChip" class="chip hidden">Co-host</span><button id="playersBtn" class="btn sm dark hidden">Players <span id="playersCount">0</span></button><span id="who"></span><button id="signOutBtn" class="btn sm ghost hidden" style="color:#e9dfcb;border-color:#555">Sign out</button></div>
+</header>
+
+<main class="wrap">
+  <section id="h-loading"><div class="card"><p>Loading…</p></div></section>
+
+  <section id="h-signin" class="hidden" style="max-width:520px;margin:6vh auto 0">
+    <div class="card">
+      <h2>Host sign-in</h2>
+      <p class="muted">Sign in with a Google account that's on the host list in your Firestore rules.</p>
+      <div id="signinErr" class="err hidden" style="margin:10px 0"></div>
+      <button id="googleBtn" class="btn primary big" style="width:100%">Sign in with Google</button>
+    </div>
+  </section>
+
+  <section id="h-setup" class="hidden">
+    <div id="activeCard" class="card hidden" style="margin-bottom:18px">
+      <h3>Games in progress</h3>
+      <p class="muted small" style="margin:0 0 4px">Your unfinished games, and games you're a co-host on. Open one to pick it up on this computer.</p>
+      <div id="activeList" class="glist"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>1 · Question bank</h3>
+        <div id="drop" class="drop">
+          <b>Drop your .xlsx or .csv here</b><br><span class="muted small">or click to choose a file</span>
+          <input id="file" type="file" accept=".xlsx,.csv" class="hidden">
+        </div>
+        <p class="small" style="margin:10px 0 0">Need a starting point? <a href="templates/Question-Bank-Template.xlsx" download>Download the template</a> · <a href="templates/Sample-Question-Bank.xlsx" download>Sample bank (12 questions)</a></p>
+        <div id="bankStatus" style="margin-top:12px"></div>
+        <div id="bankPrev"></div>
+      </div>
+      <div class="card">
+        <h3>2 · Game settings</h3>
+        <label class="lbl" for="title">Game title</label>
+        <input id="title" type="text" maxlength="80">
+        <label class="lbl">Join codes</label>
+        <label class="radio"><input type="radio" name="mode" value="solo" checked><span><b>One code for everyone</b><br><span class="muted small">Everyone plays for themselves.</span></span></label>
+        <label class="radio"><input type="radio" name="mode" value="teams"><span><b>Teams — one code per team</b><br><span class="muted small">The code a player uses puts them on that team.</span></span></label>
+        <div id="teamOpts" class="hidden" style="margin-left:26px">
+          <label class="lbl" for="teamCount">Number of teams</label>
+          <select id="teamCount" style="width:120px"></select>
+          <div id="teamNames" class="teamnames"></div>
+          <label class="lbl">Team score</label>
+          <label class="radio"><input type="radio" name="tscore" value="avg" checked><span><b>Average per player</b> <span class="muted small">(fair when teams are different sizes)</span></span></label>
+          <label class="radio"><input type="radio" name="tscore" value="sum"><span><b>Total of all players</b> <span class="muted small">(bigger teams score more)</span></span></label>
+        </div>
+        <label class="lbl">Options</label>
+        <label class="check"><input type="checkbox" id="optSpeed" checked><span><b>Speed bonus</b> — faster correct answers earn more (50–100% of the points)</span></label>
+        <label class="check"><input type="checkbox" id="optAuto" checked><span><b>End each question early</b> once everyone has answered</span></label>
+        <label class="check"><input type="checkbox" id="optLate" checked><span><b>Allow late joins</b> after the game starts</span></label>
+        <label class="check"><input type="checkbox" id="optShuffle"><span><b>Shuffle question order</b></span></label>
+        <label class="lbl" for="coHosts">Co-hosts (optional)</label>
+        <input id="coHosts" type="text" placeholder="Google email addresses, separated by commas">
+        <p class="tiny muted" style="margin:5px 0 0">A co-host can run this game from their own computer: start questions, show answers, remove players, end it and download results. Each must be on the host list in your Firestore rules.</p>
+        <div id="createErr" class="err hidden" style="margin-top:10px"></div>
+        <button id="createBtn" class="btn primary big" style="width:100%;margin-top:14px" disabled>Create game</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="h-lobby" class="hidden">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1"><h2 id="lobbyTitle"></h2><p class="muted" style="margin:2px 0 0">Players join at <b id="baseUrl"></b></p></div>
+        <button id="copyAllBtn" class="btn gold">Copy invite for Teams chat</button>
+      </div>
+      <div id="soloJoin" class="hidden" style="text-align:center;margin:22px 0 8px">
+        <div class="muted small" style="text-transform:uppercase;letter-spacing:.08em;font-weight:700">Game code</div>
+        <div class="codebig mono" id="soloCode"></div>
+        <p class="joinurl" id="soloLink"></p>
+        <button class="btn" id="copySoloBtn">Copy join link</button>
+      </div>
+      <div id="teamJoin" class="teamcards hidden" style="margin-top:18px"></div>
+      <div class="cohostbox">
+        <b>Co-hosts:</b> <span id="coHostList" class="cohostlist"></span>
+        <span id="coHostAdd" class="hidden" style="display:inline-flex;gap:6px;align-items:center"><input id="coHostInput" type="text" placeholder="name@gmail.com" style="width:220px;padding:5px 9px"><button class="btn sm" id="coHostAddBtn">Add co-host</button></span>
+        <button class="btn sm" id="copyCoHostBtn" style="margin-left:auto">Copy co-host link</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <h3 style="margin:0">Players · <span id="lobbyCount">0</span></h3>
+        <span class="muted small">Click × twice to remove someone.</span>
+        <div style="margin-left:auto;display:flex;gap:10px"><button id="cancelBtn" class="btn">Cancel game</button><button id="startBtn" class="btn primary big" disabled>Start game</button></div>
+      </div>
+      <div id="lobbyPlayers"></div>
+    </div>
+  </section>
+
+  <section id="h-live" class="hidden">
+    <div class="livebar">
+      <span class="qn" id="lvNum"></span>
+      <span class="chip" id="lvPhase"></span>
+      <div class="grow"><div class="timerbar" id="lvBarWrap"><i id="lvBar" style="width:100%"></i></div></div>
+      <span class="answered" id="lvAnswered"></span>
+      <span class="clock" id="lvClock">20</span>
+    </div>
+    <div class="card">
+      <p class="presq" id="lvText"></p>
+      <img id="lvImg" class="qimg hidden" alt="">
+    </div>
+    <div id="lvAnswers" class="answers" style="margin-top:14px"></div>
+    <div id="lvStats" class="card hidden" style="margin-top:14px"></div>
+    <div id="lvBoard" class="card hidden" style="margin-top:14px"></div>
+    <div class="controls">
+      <button id="endGameBtn" class="btn hidden">End game now</button>
+      <button id="endQBtn" class="btn dark big hidden">End question now</button>
+      <button id="boardBtn" class="btn gold big hidden">Show leaderboard</button>
+      <button id="nextBtn" class="btn primary big hidden">Next question →</button>
+    </div>
+  </section>
+
+  <section id="h-ended" class="hidden">
+    <div class="card" style="text-align:center">
+      <h3>Final results</h3>
+      <h2 id="endTitle"></h2>
+      <div class="podium" id="podium"></div>
+      <div id="endTeams" class="teambars hidden" style="max-width:640px;margin:16px auto 0;text-align:left"></div>
+      <div class="controls" style="justify-content:center">
+        <button id="exportBtn" class="btn primary big">Download results (.xlsx)</button>
+        <button id="newGameBtn" class="btn big">New game</button>
+      </div>
+      <p class="muted small" id="endNote"></p>
+    </div>
+  </section>
+
+  <section id="h-msg" class="hidden" style="max-width:600px;margin:6vh auto 0"><div class="card"><h2 id="msgTitle"></h2><p id="msgBody"></p></div></section>
+</main>
+
+<aside id="drawer" class="drawer">
+  <div style="display:flex;align-items:center"><h3 style="margin:0">Players</h3><button class="btn sm" style="margin-left:auto" id="drawerClose">Close</button></div>
+  <p class="muted small">Late joiners use the same codes:</p>
+  <div id="drawerCodes" class="small"></div>
+  <p class="muted small" style="margin-top:12px">Co-host link (only invited co-hosts can use it): <a href="#" id="drawerCoHostLink">copy</a></p>
+  <div id="drawerPlayers" style="margin-top:12px"></div>
+</aside>
+<div class="foot"><span data-app-name>FortiHoot</span> · v<span id="ver"></span> · <a href="bots.html" target="_blank" rel="noopener">Test bots &amp; security check</a></div>
+
+<script src="config.js"></script>
+<script type="module">
+import { openStore, SERVER_TIME, syncClock, errText } from "./js/store.js";
+import * as C from "./js/core.js";
+import { writeXlsx, readTableFile } from "./js/xlsx-lite.js";
+import { $, $$, esc, fmt, toast, show, copyText, SHAPES, brandHeader } from "./js/ui.js";
+
+const cfg = window.QUIZ_CONFIG || {};
+brandHeader(cfg);
+$("#ver").textContent = C.APP_VERSION;
+document.title = (cfg.appName || "FortiHoot") + " — Host";
+const SCREENS = ["h-loading", "h-signin", "h-setup", "h-lobby", "h-live", "h-ended", "h-msg"];
+const LS_BANK = "sq.host.bank", LS_SETTINGS = "sq.host.settings";
+const DRIVER_FALLBACK_MS = 6000; // if the host who opened a question vanishes, any other host reveals it this long after the grace period
+const REVEAL_GRACE_MS = 2500; // wait for answers still in flight (rules accept answers up to 2 s late)
+
+const H = { store: null, user: null, bank: null, gameId: null, game: null, priv: null, players: {}, answers: [], answersQ: -1,
+  unsubGame: null, unsubPlayers: null, unsubAnswers: null, unsubPriv: null, offset: 0, deepLinkTried: false, tick: null, revealingQ: -1, autoTimer: null, countTimer: null, lastCountWritten: -1 };
+
+const gamePath = () => `games/${H.gameId}`;
+const privPath = () => `games/${H.gameId}/private/key`;
+const baseUrl = () => location.origin + location.pathname.replace(/host\.html$/, "") ;
+const joinLink = code => `${baseUrl()}?code=${code}`;
+const coHostLink = () => `${baseUrl()}host.html?game=${H.gameId}`;
+const isOwner = () => !!(H.game && H.user && H.game.hostUid === H.user.uid);
+const myEmail = () => ((H.user && H.user.email) || "").toLowerCase();
+function statusText(g) { return g.status === "lobby" ? "Lobby — not started" : g.status === "ended" ? "Ended" : `Question ${g.qIndex + 1} of ${g.qCount}`; }
+function dateText(ms) { return ms ? new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""; }
+function msg(title, body) { $("#msgTitle").textContent = title; $("#msgBody").textContent = body; show("h-msg", SCREENS); }
+
+// ---------------- sign-in ----------------
+async function boot() {
+  try { H.store = await openStore(cfg, { appName: "host" }); }
+  catch (e) { msg("Not set up yet", errText(e)); return; }
+  H.store.onAuth(async u => {
+    H.user = u && !u.anonymous ? u : null;
+    $("#who").textContent = H.user ? (H.user.email || "") : "";
+    $("#signOutBtn").classList.toggle("hidden", !H.user);
+    if (!H.user) { if (!H.gameId) show("h-signin", SCREENS); return; }
+    const deep = new URLSearchParams(location.search).get("game");
+    if (deep && !H.deepLinkTried && !H.gameId) { H.deepLinkTried = true; await attach(deep); return; }
+    if (!H.gameId) await showSetup();
+  });
+}
+$("#googleBtn").addEventListener("click", async () => {
+  $("#signinErr").classList.add("hidden");
+  try { await H.store.signInHost(); }
+  catch (e) { $("#signinErr").textContent = errText(e); $("#signinErr").classList.remove("hidden"); }
+});
+$("#signOutBtn").addEventListener("click", async () => { detach(); await H.store.signOut(); location.reload(); });
+
+// ---------------- setup ----------------
+function loadSettings() { try { return JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}"); } catch { return {}; } }
+function saveSettings() {
+  localStorage.setItem(LS_SETTINGS, JSON.stringify({ mode: modeVal(), teamCount: Number($("#teamCount").value), teamNames: teamNamesVal(), tscore: tscoreVal(),
+    speed: $("#optSpeed").checked, auto: $("#optAuto").checked, late: $("#optLate").checked, shuffle: $("#optShuffle").checked }));
+}
+const modeVal = () => $('input[name="mode"]:checked').value;
+const tscoreVal = () => $('input[name="tscore"]:checked').value;
+const teamNamesVal = () => $$("#teamNames input").map((i, k) => C.cleanName(i.value) || C.TEAM_PRESETS[k].name);
+
+function renderTeamNames(names) {
+  const n = Number($("#teamCount").value);
+  const prev = names || teamNamesVal();
+  $("#teamNames").innerHTML = Array.from({ length: n }, (_, i) => `<div><span class="dot" style="background:${C.TEAM_PRESETS[i].color}"></span><input type="text" maxlength="20" value="${esc(prev[i] || C.TEAM_PRESETS[i].name)}"></div>`).join("");
+  $$("#teamNames input").forEach(i => i.addEventListener("change", saveSettings));
+}
+async function showSetup() {
+  const s = loadSettings();
+  $("#teamCount").innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}">${n}</option>`).join("");
+  $("#teamCount").value = String(s.teamCount || 4);
+  renderTeamNames(s.teamNames);
+  if (s.mode) $(`input[name="mode"][value="${s.mode}"]`).checked = true;
+  if (s.tscore) $(`input[name="tscore"][value="${s.tscore}"]`).checked = true;
+  for (const [id, k] of [["optSpeed", "speed"], ["optAuto", "auto"], ["optLate", "late"], ["optShuffle", "shuffle"]]) if (typeof s[k] === "boolean") $("#" + id).checked = s[k];
+  $("#teamOpts").classList.toggle("hidden", modeVal() !== "teams");
+  if (!$("#title").value) $("#title").value = `${cfg.appName || "FortiHoot"} — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+  try { const b = JSON.parse(localStorage.getItem(LS_BANK) || "null"); if (b && b.questions && b.questions.length) setBank({ questions: b.questions, errors: [], warnings: [] }, b.fileName, true); } catch {}
+  show("h-setup", SCREENS);
+  loadActiveGames();
+}
+async function loadActiveGames() {
+  const box = $("#activeCard"), list = $("#activeList");
+  const found = [];
+  try {
+    let mine;
+    try { mine = await H.store.query("games", [["hostUid", "==", H.user.uid], ["open", "==", true]]); }
+    catch (e) {
+      if (e.code !== "failed-precondition") throw e;
+      mine = (await H.store.query("games", [["hostUid", "==", H.user.uid]])).filter(g => g.open);
+    }
+    for (const g of mine) found.push({ id: g.id, g, role: "Host" });
+  } catch (e) { console.warn("own games", e); }
+  try {
+    const invites = await H.store.query("cohosts", [["email", "==", myEmail()]]);
+    for (const inv of invites) {
+      if (found.some(f => f.id === inv.game)) continue;
+      const g = await H.store.get(`games/${inv.game}`).catch(() => null);
+      if (g && g.open) found.push({ id: inv.game, g, role: "Co-host" });
+    }
+  } catch (e) { console.warn("co-host games", e); }
+  if (H.gameId) return; // opened a game meanwhile
+  found.sort((x, y) => (y.g.createdAt || 0) - (x.g.createdAt || 0));
+  box.classList.toggle("hidden", !found.length);
+  list.innerHTML = found.map(f => `<div class="grow-row"><div style="flex:1;min-width:220px"><b>${esc(f.g.title)}</b> <span class="chip">${f.role}</span><div class="muted small">${statusText(f.g)} · created ${esc(dateText(f.g.createdAt))} · ${f.g.playerCount || 0} players</div></div><button class="btn primary sm" data-open="${esc(f.id)}">Open</button><button class="btn sm" data-end="${esc(f.id)}">End it</button></div>`).join("");
+  list.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => attach(b.dataset.open)));
+  list.querySelectorAll("[data-end]").forEach(b => b.addEventListener("click", async () => {
+    if (!b.classList.contains("arm")) { b.classList.add("arm"); b.textContent = "Click again to end"; setTimeout(() => { b.classList.remove("arm"); b.textContent = "End it"; }, 3000); return; }
+    b.disabled = true;
+    await endGameById(b.dataset.end);
+    toast("Game ended."); loadActiveGames();
+  }));
+}
+$$('input[name="mode"]').forEach(r => r.addEventListener("change", () => { $("#teamOpts").classList.toggle("hidden", modeVal() !== "teams"); saveSettings(); }));
+$("#teamCount").addEventListener("change", () => { renderTeamNames(); saveSettings(); });
+$$('input[name="tscore"], #optSpeed, #optAuto, #optLate, #optShuffle').forEach(el => el.addEventListener("change", saveSettings));
+
+function setBank(parsed, fileName, restored) {
+  H.bank = parsed.questions.length && !parsed.errors.length ? parsed : null;
+  const st = $("#bankStatus");
+  const issues = (list, cls) => list.length ? `<div class="${cls}" style="margin-top:8px"><ul class="issues">${list.slice(0, 25).map(x => `<li>${x.row ? `Row ${x.row}: ` : ""}${esc(x.msg)}</li>`).join("")}${list.length > 25 ? `<li>…and ${list.length - 25} more</li>` : ""}</ul></div>` : "";
+  if (parsed.errors.length) st.innerHTML = `<div class="err">${esc(fileName)}: fix ${parsed.errors.length} problem${parsed.errors.length === 1 ? "" : "s"}, then load it again.</div>${issues(parsed.errors, "err")}${issues(parsed.warnings, "warnbox")}`;
+  else st.innerHTML = `<div class="okbox">${parsed.questions.length} questions ${restored ? "remembered from" : "loaded from"} ${esc(fileName)}</div>${issues(parsed.warnings, "warnbox")}`;
+  $("#bankPrev").innerHTML = parsed.questions.length ? `<div class="prevwrap"><table class="prev"><thead><tr><th>#</th><th>Question</th><th>Correct</th><th>Time</th><th>Pts</th></tr></thead><tbody>${parsed.questions.map((q, i) => `<tr><td>${i + 1}</td><td>${esc(q.text)}<div class="muted tiny">${q.type === "tf" ? "True/False" : q.type === "multi" ? "Multi-select" : "Multiple choice"}${q.image ? " · image" : ""}</div></td><td>${q.correct.map(c => `${C.LETTERS[c]}: ${esc(q.options[c])}`).join("<br>")}</td><td>${q.time}s</td><td>${q.points}</td></tr>`).join("")}</tbody></table></div>` : "";
+  $("#createBtn").disabled = !H.bank;
+  if (H.bank && !restored) localStorage.setItem(LS_BANK, JSON.stringify({ fileName, questions: parsed.questions }));
+}
+async function loadFile(f) {
+  if (!f) return;
+  try { setBank(C.parseBank(await readTableFile(f)), f.name, false); }
+  catch (e) { $("#bankStatus").innerHTML = `<div class="err">${esc(f.name)}: ${esc(e.message || e)}</div>`; $("#bankPrev").innerHTML = ""; H.bank = null; $("#createBtn").disabled = true; }
+}
+$("#drop").addEventListener("click", () => $("#file").click());
+$("#file").addEventListener("change", e => { loadFile(e.target.files[0]); e.target.value = ""; });
+$("#drop").addEventListener("dragover", e => { e.preventDefault(); $("#drop").classList.add("over"); });
+$("#drop").addEventListener("dragleave", () => $("#drop").classList.remove("over"));
+$("#drop").addEventListener("drop", e => { e.preventDefault(); $("#drop").classList.remove("over"); loadFile(e.dataTransfer.files[0]); });
+
+// ---------------- create ----------------
+$("#createBtn").addEventListener("click", async () => {
+  const err = $("#createErr"); err.classList.add("hidden");
+  if (!H.bank) return;
+  $("#createBtn").disabled = true; $("#createBtn").textContent = "Creating…";
+  try {
+    saveSettings();
+    const co = C.parseEmails($("#coHosts").value);
+    if (co.bad.length) throw new Error(`Not an email address: ${co.bad.join(", ")}`);
+    if (co.tooMany) throw new Error("Up to 10 co-hosts per game.");
+    const uid = H.user.uid, mode = modeVal();
+    const qs = $("#optShuffle").checked ? C.shuffled(H.bank.questions) : H.bank.questions.slice();
+    const teams = mode === "teams" ? teamNamesVal().map((n, i) => ({ id: "t" + (i + 1), name: n, color: C.TEAM_PRESETS[i].color })) : [];
+    const gameId = H.store.newId();
+    const game = { hostUid: uid, title: C.cleanName($("#title").value).length ? $("#title").value.trim().slice(0, 80) : "FortiHoot", mode, teams,
+      status: "lobby", qIndex: -1, qCount: qs.length, q: null, qStart: null, reveal: null, board: null, scores: {},
+      settings: { speed: $("#optSpeed").checked, teamScoring: tscoreVal(), lateJoin: $("#optLate").checked, autoEnd: $("#optAuto").checked },
+      playerCount: 0, banned: {}, open: true, driver: null, createdAt: SERVER_TIME, v: C.APP_VERSION };
+    try { await H.store.set(`games/${gameId}`, game); }
+    catch (e) {
+      if (e.code === "permission-denied") throw new Error(`${H.user.email} isn't on the host list in your Firestore rules. Add it to hostEmails() and publish the rules (setup guide step 3).`);
+      throw e;
+    }
+    const codes = [];
+    for (const t of (teams.length ? teams : [{ id: null }])) {
+      for (let attempt = 0; ; attempt++) {
+        const code = C.makeCode();
+        try { await H.store.set(`codes/${code}`, { game: gameId, team: t.id, host: uid, active: true, createdAt: SERVER_TIME }); codes.push({ code, team: t.id }); break; }
+        catch (e) { if (e.code !== "permission-denied" || attempt >= 5) throw e; }
+      }
+    }
+    const added = [], refused = [];
+    for (const e of co.emails.filter(e => e !== myEmail())) {
+      try { await H.store.set(`cohosts/${gameId}_${e}`, { game: gameId, email: e, title: game.title, by: uid, createdAt: SERVER_TIME }); added.push(e); }
+      catch (er) { refused.push(e); }
+    }
+    H.gameId = gameId;
+    await H.store.set(privPath(), { questions: qs, codes, results: {}, names: {}, coHosts: added, startedAt: null, ping: SERVER_TIME });
+    await attach(gameId);
+    if (refused.length) toast(`Not added as co-host — not on the host list in your rules: ${refused.join(", ")}`, 7000);
+  } catch (e) {
+    console.error(e);
+    err.textContent = errText(e); err.classList.remove("hidden");
+    H.gameId = null;
+  } finally { $("#createBtn").disabled = !H.bank; $("#createBtn").textContent = "Create game"; }
+});
+
+// ---------------- attach to a game (new or resumed) ----------------
+function expandResults(raw) {
+  const out = {};
+  for (const [qi, per] of Object.entries(raw || {})) { out[qi] = { perPlayer: {} }; for (const [u, v] of Object.entries(per || {})) out[qi].perPlayer[u] = { c: v[0], rt: v[1], pts: v[2], ok: !!v[3] }; }
+  return out;
+}
+function compactResult(perPlayer) { const o = {}; for (const [u, p] of Object.entries(perPlayer)) o[u] = [p.c, p.rt, p.pts, p.ok ? 1 : 0]; return o; }
+
+function setPriv(d) { H.priv = { ...d, results: expandResults(d.results), names: d.names || {}, coHosts: d.coHosts || [] }; }
+
+async function attach(gameId) {
+  detach();
+  H.gameId = gameId;
+  let priv;
+  try { priv = await H.store.get(privPath()); }
+  catch (e) {
+    H.gameId = null;
+    if (e.code === "permission-denied") { msg("You can't run this game", `${H.user.email} isn't the host or a co-host of this game. Ask its host to add you as a co-host.`); return; }
+    msg("Can't open that game", errText(e)); return;
+  }
+  if (!priv) { H.gameId = null; msg("Can't open that game", "It doesn't exist or its answer key is missing."); return; }
+  setPriv(priv);
+  try { H.offset = await syncClock(H.store, privPath(), "ping", () => H.store.update(privPath(), { ping: SERVER_TIME })); } catch (e) { console.warn("clock", e); }
+  // the answer key + results doc is shared by every host on the game: keep it live
+  H.unsubPriv = H.store.watch(privPath(), d => { if (!d) return; setPriv(d); if (H.game && H.game.status === "lobby") renderCoHosts(); }, e => console.warn(e));
+  H.unsubPlayers = H.store.watchQuery(`games/${gameId}/players`, [], list => {
+    H.players = {};
+    for (const p of list) H.players[p.id] = { name: p.name, team: p.team ?? null };
+    H.playersLoaded = true;
+    renderPlayers(); schedulePlayerCount(); maybeAutoEnd();
+  }, e => toast(errText(e)));
+  H.unsubGame = H.store.watch(gamePath(), g => { if (!g) return; H.game = g; render(); }, e => toast(errText(e)));
+  $("#playersBtn").classList.remove("hidden");
+  $("#activeCard").classList.add("hidden");
+}
+function detach() {
+  for (const k of ["unsubGame", "unsubPlayers", "unsubAnswers", "unsubPriv"]) { if (H[k]) H[k](); H[k] = null; }
+  clearInterval(H.tick); clearTimeout(H.autoTimer); clearTimeout(H.countTimer);
+  H.answersQ = -1; H.answers = []; H.players = {}; H.game = null; H.playersLoaded = false; H.answersLoadedQ = -1;
+}
+
+function schedulePlayerCount() {
+  clearTimeout(H.countTimer);
+  H.countTimer = setTimeout(async () => {
+    const n = Object.keys(H.players).length;
+    if (H.game && H.game.status !== "ended" && n !== H.game.playerCount && n !== H.lastCountWritten) {
+      H.lastCountWritten = n;
+      try { await H.store.update(gamePath(), { playerCount: n }); } catch (e) { console.warn(e); }
+    }
+  }, 2000);
+}
+
+// ---------------- rendering ----------------
+function teamById(id) { return (H.game?.teams || []).find(t => t.id === id); }
+function playerChips(container, armable) {
+  const g = H.game; if (!g) return;
+  const groups = g.mode === "teams" ? g.teams.map(t => ({ t, list: [] })) : [{ t: null, list: [] }];
+  for (const [uid, p] of Object.entries(H.players)) { const grp = g.mode === "teams" ? groups.find(x => x.t.id === p.team) : groups[0]; if (grp) grp.list.push({ uid, ...p }); }
+  container.innerHTML = groups.map(({ t, list }) => `${t ? `<div style="margin-top:12px;font-weight:800"><span class="dot" style="background:${esc(t.color)}"></span> ${esc(t.name)} · ${list.length}</div>` : ""}<div class="plist">${list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).map(p => `<span class="pchip">${esc(p.name)}${armable ? `<button data-kick="${esc(p.uid)}" title="Remove">×</button>` : ""}</span>`).join("") || `<span class="muted small">Nobody yet</span>`}</div>`).join("");
+  container.querySelectorAll("[data-kick]").forEach(b => b.addEventListener("click", () => {
+    if (!b.classList.contains("arm")) { b.classList.add("arm"); b.textContent = "Remove?"; setTimeout(() => { b.classList.remove("arm"); b.textContent = "×"; }, 3000); return; }
+    kick(b.dataset.kick);
+  }));
+}
+function renderPlayers() {
+  const n = Object.keys(H.players).length;
+  $("#playersCount").textContent = n; $("#lobbyCount").textContent = n;
+  $("#startBtn").disabled = n === 0;
+  playerChips($("#lobbyPlayers"), true);
+  playerChips($("#drawerPlayers"), true);
+  if (H.game?.status === "question") updateAnswered();
+}
+async function kick(uid) {
+  try { await H.store.batch([{ type: "delete", path: `games/${H.gameId}/players/${uid}` }, { type: "update", path: gamePath(), data: { [`banned.${uid}`]: true } }]); toast("Player removed."); }
+  catch (e) { toast(errText(e)); }
+}
+
+function renderCodes() {
+  const codes = H.priv.codes || [];
+  $("#baseUrl").textContent = baseUrl();
+  const solo = H.game.mode !== "teams";
+  $("#soloJoin").classList.toggle("hidden", !solo);
+  $("#teamJoin").classList.toggle("hidden", solo);
+  if (solo) { $("#soloCode").textContent = codes[0].code; $("#soloLink").textContent = joinLink(codes[0].code); }
+  else $("#teamJoin").innerHTML = codes.map(c => { const t = teamById(c.team) || { name: "?", color: "#999" }; return `<div class="tcard"><div class="bar" style="background:${esc(t.color)}"></div><div class="in"><b>Team ${esc(t.name)}</b><div class="code mono">${c.code}</div><div class="tiny muted" style="word-break:break-all">${esc(joinLink(c.code))}</div><button class="btn sm" style="margin-top:8px" data-copy="${esc(joinLink(c.code))}">Copy link</button></div></div>`; }).join("");
+  $$("#teamJoin [data-copy]").forEach(b => b.addEventListener("click", async () => { await copyText(b.dataset.copy); toast("Link copied."); }));
+  $("#drawerCodes").innerHTML = codes.map(c => { const t = teamById(c.team); return `<div style="margin:4px 0">${t ? `<span class="dot" style="background:${esc(t.color)}"></span> ${esc(t.name)}: ` : ""}<b class="mono">${c.code}</b> · <span class="muted">${esc(joinLink(c.code))}</span></div>`; }).join("");
+}
+function inviteText() {
+  const codes = H.priv.codes || [], g = H.game;
+  const lines = [`Join "${g.title}" on ${cfg.appName || "FortiHoot"}:`];
+  if (g.mode !== "teams") lines.push(`${joinLink(codes[0].code)}  (code ${codes[0].code})`);
+  else for (const c of codes) { const t = teamById(c.team); lines.push(`Team ${t ? t.name : "?"}: ${joinLink(c.code)}  (code ${c.code})`); }
+  lines.push("Use a laptop browser or your phone. Enter your name and wait for the first question.");
+  return lines.join("\n");
+}
+$("#copyAllBtn").addEventListener("click", async () => { await copyText(inviteText()); toast("Invite copied — paste it into the Teams chat."); });
+$("#copySoloBtn").addEventListener("click", async () => { await copyText(joinLink(H.priv.codes[0].code)); toast("Link copied."); });
+
+function renderCoHosts() {
+  const list = (H.priv && H.priv.coHosts) || [], own = isOwner();
+  $("#coHostList").innerHTML = list.length ? list.map(e => `<span class="pchip">${esc(e)}${own ? `<button data-rmco="${esc(e)}" title="Remove co-host">×</button>` : ""}</span>`).join("") : `<span class="muted small">None</span>`;
+  $("#coHostAdd").classList.toggle("hidden", !own);
+  $("#coHostList").querySelectorAll("[data-rmco]").forEach(b => b.addEventListener("click", async () => {
+    if (!b.classList.contains("arm")) { b.classList.add("arm"); b.textContent = "Remove?"; setTimeout(() => { b.classList.remove("arm"); b.textContent = "×"; }, 3000); return; }
+    const e = b.dataset.rmco;
+    try {
+      await H.store.del(`cohosts/${H.gameId}_${e}`);
+      await H.store.update(privPath(), { coHosts: (H.priv.coHosts || []).filter(x => x !== e) });
+      toast(`${e} removed as co-host.`);
+    } catch (er) { toast(errText(er)); }
+  }));
+}
+async function addCoHost() {
+  const r = C.parseEmails($("#coHostInput").value);
+  if (r.bad.length || !r.emails.length) return toast("Enter one Google email address.");
+  const e = r.emails[0];
+  if (e === myEmail() || (H.priv.coHosts || []).includes(e)) return toast("Already a host on this game.");
+  try {
+    await H.store.set(`cohosts/${H.gameId}_${e}`, { game: H.gameId, email: e, title: H.game.title, by: H.user.uid, createdAt: SERVER_TIME });
+    await H.store.update(privPath(), { coHosts: [...(H.priv.coHosts || []), e] });
+    $("#coHostInput").value = ""; toast(`${e} can now run this game. Send them the co-host link.`);
+  } catch (er) { toast(er.code === "permission-denied" ? `${e} isn't on the host list in your Firestore rules.` : errText(er), 6000); }
+}
+$("#coHostAddBtn").addEventListener("click", addCoHost);
+$("#coHostInput").addEventListener("keydown", ev => { if (ev.key === "Enter") addCoHost(); });
+$("#copyCoHostBtn").addEventListener("click", async () => { await copyText(coHostLink()); toast("Co-host link copied. Only invited co-hosts can use it."); });
+$("#drawerCoHostLink").addEventListener("click", async ev => { ev.preventDefault(); await copyText(coHostLink()); toast("Co-host link copied."); });
+
+function render() {
+  const g = H.game;
+  $("#roleChip").classList.toggle("hidden", isOwner());
+  if (g.status === "lobby") { $("#lobbyTitle").textContent = g.title; renderCodes(); renderPlayers(); renderCoHosts(); show("h-lobby", SCREENS); return; }
+  if (g.status === "ended") { clearInterval(H.tick); renderEnded(); return; }
+  renderCodes();
+  renderLive();
+}
+
+function answersFromPlayers() { return H.answers.filter(a => H.players[a.u]); }
+function updateAnswered() {
+  const n = Object.keys(H.players).length, a = answersFromPlayers().length;
+  $("#lvAnswered").textContent = `${a} / ${n} answered`;
+}
+function ensureAnswerListener(i) {
+  if (H.answersQ === i) return;
+  if (H.unsubAnswers) H.unsubAnswers();
+  H.answersQ = i; H.answers = []; H.answersLoadedQ = -1;
+  H.unsubAnswers = H.store.watchQuery(`games/${H.gameId}/answers`, [["q", "==", i]], list => { H.answers = list; H.answersLoadedQ = i; updateAnswered(); maybeAutoEnd(); }, e => toast(errText(e)));
+}
+function iDrive() { const d = H.game && H.game.driver; return !d || d === H.user.uid; }
+function maybeAutoEnd() {
+  const g = H.game;
+  if (!g || g.status !== "question" || !g.settings?.autoEnd || H.revealingQ === g.qIndex || !H.playersLoaded || H.answersLoadedQ !== g.qIndex || !iDrive()) return;
+  const n = Object.keys(H.players).length;
+  if (n > 0 && answersFromPlayers().length >= n && !H.autoTimer) H.autoTimer = setTimeout(() => { H.autoTimer = null; reveal(); }, 700);
+}
+
+function tiles(q, opts = {}) {
+  const box = $("#lvAnswers");
+  box.className = "answers" + (q.type === "tf" ? " tf" : "");
+  const max = Math.max(1, ...(opts.counts || [0]));
+  box.innerHTML = q.options.map((o, i) => {
+    const isC = opts.correct && opts.correct.includes(i);
+    const cls = opts.correct ? (isC ? " correct" : " dim") : "";
+    const count = opts.counts ? `<span class="count">${opts.counts[i]}</span>` : "";
+    const meter = opts.counts ? `<span class="meter" style="width:${Math.round((opts.counts[i] / max) * 100)}%"></span>` : "";
+    return `<button class="ans o${i}${cls}" disabled>${SHAPES[i]}<span class="txt">${esc(o)}${isC ? " ✓" : ""}</span>${count}${meter}</button>`;
+  }).join("");
+}
+
+function setControls(status) {
+  const last = H.game.qIndex >= H.game.qCount - 1;
+  $("#endQBtn").classList.toggle("hidden", status !== "question");
+  $("#boardBtn").classList.toggle("hidden", status !== "reveal");
+  $("#nextBtn").classList.toggle("hidden", !(status === "reveal" || status === "board"));
+  $("#nextBtn").textContent = last ? "Final results →" : "Next question →";
+  $("#endGameBtn").classList.toggle("hidden", !(status === "reveal" || status === "board") || last);
+}
+
+function renderLive() {
+  const g = H.game, i = g.qIndex, q = H.priv.questions[i];
+  if (!q) return;
+  show("h-live", SCREENS);
+  $("#lvNum").textContent = `Question ${i + 1} of ${g.qCount}`;
+  $("#lvText").textContent = q.text;
+  const img = $("#lvImg");
+  if (q.image) { img.src = q.image; img.classList.remove("hidden"); } else { img.removeAttribute("src"); img.classList.add("hidden"); }
+  setControls(g.status);
+  $("#lvStats").classList.add("hidden"); $("#lvBoard").classList.add("hidden");
+  if (g.status === "question") {
+    $("#lvPhase").textContent = "Answering";
+    $("#lvBarWrap").classList.remove("hidden"); $("#lvClock").classList.remove("hidden");
+    tiles(q);
+    ensureAnswerListener(i);
+    updateAnswered();
+    clearInterval(H.tick);
+    const step = () => {
+      const ms = C.remainingMs(H.game.qStart, q.time, H.offset);
+      const secs = Math.max(0, Math.ceil(ms / 1000));
+      $("#lvClock").textContent = secs; $("#lvClock").classList.toggle("low", secs <= 5);
+      $("#lvBar").style.width = Math.max(0, Math.min(100, (ms / (q.time * 1000)) * 100)) + "%";
+      if (H.game.status === "question" && (ms <= -REVEAL_GRACE_MS && iDrive() || ms <= -(REVEAL_GRACE_MS + DRIVER_FALLBACK_MS))) reveal();
+      else if (ms <= 0) $("#lvPhase").textContent = "Time's up — collecting answers…";
+    };
+    step(); H.tick = setInterval(step, 200);
+    return;
+  }
+  clearInterval(H.tick);
+  $("#lvClock").classList.add("hidden"); $("#lvBarWrap").classList.add("hidden");
+  const r = g.reveal || { correct: q.correct, counts: q.options.map(() => 0), answered: 0, total: 0 };
+  tiles(q, { correct: r.correct, counts: r.counts });
+  $("#lvAnswered").textContent = `${r.answered} / ${r.total} answered`;
+  if (g.status === "reveal") {
+    $("#lvPhase").textContent = "Answer";
+    const per = H.priv.results[i]?.perPlayer || {};
+    const vals = Object.entries(per).filter(([u]) => H.players[u] || H.priv.names[u]);
+    const ok = vals.filter(([, p]) => p.ok);
+    const avg = vals.length ? (vals.reduce((s, [, p]) => s + p.rt, 0) / vals.length / 1000).toFixed(1) : "–";
+    const fastest = ok.sort((a, b) => a[1].rt - b[1].rt).slice(0, 3).map(([u, p]) => `${esc(H.players[u]?.name || H.priv.names[u]?.[0] || "?")} (${(p.rt / 1000).toFixed(1)}s)`);
+    $("#lvStats").innerHTML = `<b>${vals.length ? Math.round((ok.length / vals.length) * 100) : 0}% correct</b> · average answer time ${avg}s${fastest.length ? ` · fastest correct: ${fastest.join(", ")}` : ""}`;
+    $("#lvStats").classList.remove("hidden");
+  } else if (g.status === "board") {
+    $("#lvPhase").textContent = "Leaderboard";
+    renderBoard($("#lvBoard"), g.board);
+    $("#lvBoard").classList.remove("hidden");
+  }
+}
+
+function teamBarsHtml(teams) {
+  const max = Math.max(1, ...teams.map(t => t.s));
+  return teams.map(t => `<div class="row"><span><span class="dot" style="background:${esc(t.c)}"></span> ${esc(t.n)} <span class="muted small">(${t.p})</span></span><div class="bar"><i style="width:${Math.round((t.s / max) * 100)}%;background:${esc(t.c)}"></i></div><span class="val">${fmt(t.s)}</span></div>`).join("");
+}
+function renderBoard(el, b) {
+  if (!b) { el.innerHTML = ""; return; }
+  const teams = H.game.mode === "teams" && b.teams?.length;
+  el.innerHTML = `<div class="${teams ? "grid2" : ""}"><div><h3>Top players</h3><ol class="board">${b.top.map(p => `<li class="p${p.r}"><span class="rk">${p.r}</span><span class="nm">${esc(p.n)}${p.t && teamById(p.t) ? ` <span class="muted small">· ${esc(teamById(p.t).name)}</span>` : ""}</span><span class="sc">${fmt(p.s)}</span></li>`).join("")}</ol></div>${teams ? `<div><h3>Teams · ${H.game.settings.teamScoring === "sum" ? "total" : "average per player"}</h3><div class="teambars">${teamBarsHtml(b.teams)}</div></div>` : ""}</div>`;
+}
+
+function renderEnded() {
+  const g = H.game, b = g.board || { top: [], teams: [] };
+  $("#playersBtn").classList.add("hidden");
+  $("#endTitle").textContent = g.title;
+  const top = b.top.slice(0, 3);
+  const order = [top[1], top[0], top[2]];
+  const heights = [120, 165, 90], colors = ["#a7adb4", "#c9a227", "#b07a46"];
+  $("#podium").innerHTML = order.map((p, k) => p ? `<div class="step"><div class="nm">${esc(p.n)}</div><div class="sc">${fmt(p.s)}</div><div class="blk" style="height:${heights[k]}px;background:${colors[k]}">${p.r}</div></div>` : `<div class="step"></div>`).join("");
+  const teams = g.mode === "teams" && b.teams?.length;
+  $("#endTeams").classList.toggle("hidden", !teams);
+  if (teams) $("#endTeams").innerHTML = `<h3>Teams · ${g.settings.teamScoring === "sum" ? "total" : "average per player"}</h3>` + teamBarsHtml(b.teams);
+  $("#endNote").textContent = `${b.total || 0} players · ${Object.keys(H.priv?.results || {}).length} questions asked`;
+  show("h-ended", SCREENS);
+}
+
+// ---------------- game flow ----------------
+async function startQuestion(i) {
+  const q = H.priv.questions[i];
+  clearTimeout(H.autoTimer); H.autoTimer = null;
+  ensureAnswerListener(i);
+  await H.store.update(gamePath(), { status: "question", qIndex: i, q: C.publicQuestion(q), qStart: SERVER_TIME, reveal: null, driver: H.user.uid });
+  if (i === 0 && !H.priv.startedAt) { H.priv.startedAt = Date.now(); H.store.update(privPath(), { startedAt: SERVER_TIME }).catch(console.warn); }
+}
+async function reveal() {
+  const g = H.game;
+  if (!g || g.status !== "question" || H.revealingQ === g.qIndex) return; // one reveal per question per host
+  if (!H.playersLoaded || H.answersLoadedQ !== g.qIndex || g.qStart == null) return; // still loading after a refresh; the timer retries
+  H.revealingQ = g.qIndex; clearTimeout(H.autoTimer); H.autoTimer = null;
+  try {
+    const i = g.qIndex, q = H.priv.questions[i];
+    const players = { ...H.players };
+    const res = C.scoreQuestion({ answers: H.answers.map(a => ({ u: a.u, c: a.c, at: a.at })), qStart: g.qStart, q, players, speed: g.settings.speed });
+    H.priv.results[i] = { perPlayer: res.perPlayer };
+    for (const [u, p] of Object.entries(players)) H.priv.names[u] = [p.name, p.team ?? null];
+    const totals = C.totalsFrom(H.priv.results, players);
+    const ranked = C.rankPlayers(totals, players);
+    const teamRows = g.mode === "teams" ? C.teamStandings(g.teams, ranked, g.settings.teamScoring) : [];
+    await H.store.update(gamePath(), {
+      status: "reveal",
+      reveal: { correct: q.correct, counts: res.counts, answered: res.answered, total: Object.keys(players).length },
+      scores: C.publicScores(ranked, { perPlayer: res.perPlayer }),
+      board: C.publicBoard(ranked, teamRows)
+    });
+    await H.store.update(privPath(), { [`results.${i}`]: compactResult(res.perPlayer), names: H.priv.names });
+  } catch (e) { console.error(e); toast(errText(e)); H.revealingQ = -1; }
+}
+async function endGame(abandon) {
+  try {
+    if (H.game && H.game.status === "question" && !abandon) await reveal();
+    await H.store.update(gamePath(), { status: "ended", open: false });
+    const codes = (H.priv && H.priv.codes) || [];
+    if (codes.length) await H.store.batch(codes.map(c => ({ type: "update", path: `codes/${c.code}`, data: { active: false } })));
+  } catch (e) { toast(errText(e)); }
+}
+/** Ends a game from the "Games in progress" list without opening it. */
+async function endGameById(id) {
+  try {
+    const priv = await H.store.get(`games/${id}/private/key`);
+    await H.store.update(`games/${id}`, { status: "ended", open: false });
+    const codes = (priv && priv.codes) || [];
+    if (codes.length) await H.store.batch(codes.map(c => ({ type: "update", path: `codes/${c.code}`, data: { active: false } })));
+  } catch (e) { toast(errText(e)); }
+}
+
+$("#startBtn").addEventListener("click", async () => { $("#startBtn").disabled = true; try { await startQuestion(0); } catch (e) { toast(errText(e)); $("#startBtn").disabled = false; } });
+$("#endQBtn").addEventListener("click", () => {
+  // give answers already on their way a moment to land before scoring
+  $("#endQBtn").disabled = true; $("#lvPhase").textContent = "Collecting answers…";
+  setTimeout(() => { $("#endQBtn").disabled = false; reveal(); }, 1500);
+});
+$("#boardBtn").addEventListener("click", async () => { try { await H.store.update(gamePath(), { status: "board" }); } catch (e) { toast(errText(e)); } });
+$("#nextBtn").addEventListener("click", async () => {
+  const g = H.game; $("#nextBtn").disabled = true;
+  try { if (g.qIndex + 1 < g.qCount) await startQuestion(g.qIndex + 1); else await endGame(); }
+  catch (e) { toast(errText(e)); } finally { $("#nextBtn").disabled = false; }
+});
+let endArm = null;
+$("#endGameBtn").addEventListener("click", async () => {
+  const b = $("#endGameBtn");
+  if (!endArm) { b.textContent = "Click again to end"; endArm = setTimeout(() => { b.textContent = "End game now"; endArm = null; }, 3000); return; }
+  clearTimeout(endArm); endArm = null; b.textContent = "End game now"; await endGame();
+});
+let cancelArm = null;
+$("#cancelBtn").addEventListener("click", async () => {
+  const b = $("#cancelBtn");
+  if (!cancelArm) { b.textContent = "Click again to cancel"; cancelArm = setTimeout(() => { b.textContent = "Cancel game"; cancelArm = null; }, 3000); return; }
+  clearTimeout(cancelArm); cancelArm = null; b.textContent = "Cancel game";
+  await endGame(true); detach(); H.gameId = null; $("#playersBtn").classList.add("hidden"); showSetup();
+});
+$("#newGameBtn").addEventListener("click", () => { detach(); H.gameId = null; H.priv = null; showSetup(); });
+$("#playersBtn").addEventListener("click", () => $("#drawer").classList.add("open"));
+$("#drawerClose").addEventListener("click", () => $("#drawer").classList.remove("open"));
+
+$("#exportBtn").addEventListener("click", () => {
+  const g = H.game, p = H.priv;
+  const players = {};
+  for (const [u, n] of Object.entries(p.names || {})) players[u] = { name: n[0], team: n[1] };
+  for (const [u, n] of Object.entries(H.players)) players[u] = { name: n.name, team: n.team };
+  for (const u of Object.keys(g.banned || {})) delete players[u];
+  const sheets = C.buildExport({ title: g.title, startedAt: p.startedAt ? new Date(p.startedAt).toLocaleString() : "", mode: g.mode, teams: g.teams,
+    teamMethod: g.settings.teamScoring, questions: p.questions, order: p.questions.map((_, i) => i), results: p.results, players, speed: g.settings.speed });
+  const blob = new Blob([writeXlsx(sheets)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${g.title.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") || "FortiHoot"}-results.xlsx`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+});
+
+boot();
+</script>
+</body>
+</html>

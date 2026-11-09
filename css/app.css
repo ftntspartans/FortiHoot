@@ -1,0 +1,111 @@
+/* FortiHoot — shared styles (BoM Builder "Spartan Light" theme). */
+/* Spartan Light theme tokens, copied verbatim from BoM Builder v1.4.2 html[data-theme="spartan-light"]. Keep in sync. */
+:root{
+  --bg:#f5f3ef; --surface:#ffffff; --panel:#edeae4; --panel-hover:#e4dfd6; --panel-border:#ddd8cf; --sunken:#faf8f4; --bar:#edeae4;
+  --ink:#1f2328; --mut:#7d7568; --line:#e6e3dd; --line-soft:#eeeae1;
+  --header-bg:#17191c; --header-ink:#ffffff; --header-sub:#9aa1a8; --header-btn-border:#4a5058;
+  --accent:#cc2027; --accent-strong:#b31d24; --accent-tint:#fbeeec; --accent-tint-border:#e6bdb9; --accent-ink:#ffffff;
+  --pick:#bd8b4f; --pick-bg:#fbf3e8; --pick-bg-2:#f3e6d2;
+  --sum-total-bg:#17191c; --sum-total-border:#bd8b4f; --sum-total-val:#d9a45e; --sum-svc-val:#9a6f2a;
+  --warn:#bd8b4f; --warn-bg:#f7efdd; --warn-border:#e6d3a2; --warn-ink:#856318;
+  --zebra:#faf8f4; --row-hover:#f1ece4; --lbl-sfdc:#1273c6; --lbl-xlsx:#1e7a45;
+}
+/* FortiHoot names, mapped onto the Spartan Light tokens above */
+:root{
+  --surface-2:var(--sunken); --accent-dark:var(--accent-strong);
+  --gold:var(--pick); --gold-dark:var(--sum-svc-val); --gold-tint:var(--pick-bg); --gold-bright:var(--sum-total-val);
+  --ok:var(--lbl-xlsx); --ok-tint:#e9f5ee; --bad:var(--accent); --bad-tint:var(--accent-tint); --warn-tint:var(--warn-bg);
+  --a0:#cc2027; --a1:#1273c6; --a2:#9a6f2a; --a3:#1e7a45;   /* answer tiles: Spartan red, SFDC blue, Spartan bronze, XLSX green */
+  --radius:16px; --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 22px rgba(16,24,40,.045);
+  --spartan-bg:url("../img/spartan-bg.png");
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:16px;color:var(--ink);background-color:var(--bg)}
+/* The Spartan watermark: same treatment as the BoM Builder family (fixed, no repeat). */
+body.spartan-bg{background-image:var(--spartan-bg);background-repeat:no-repeat;background-attachment:fixed;background-position:50% 62%;background-size:min(62vh,680px,92vw)}
+button,input,select,textarea{font:inherit}
+a{color:var(--accent-dark)}
+.hidden{display:none!important}
+.muted{color:var(--mut)} .small{font-size:13px} .tiny{font-size:12px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ---------- header (BoM Builder style: Fortinet logo chip + app name) ---------- */
+.sq-head{position:sticky;top:0;z-index:20;background:var(--header-bg);color:var(--header-ink);display:flex;align-items:center;gap:14px;padding:15px 20px}
+.brand-logo{display:inline-flex;align-items:center;background:#fff;border-radius:6px;padding:5px 10px;flex:0 0 auto}
+.brand-logo img{height:22px;display:block}
+.app-name{font-size:19px;font-weight:700;color:var(--header-ink);letter-spacing:.01em;white-space:nowrap}
+.app-name .hoot{color:var(--gold-bright)}
+.sq-head .sq-title{font-size:14px;font-weight:600;color:var(--header-sub)}
+.sq-head .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--header-sub);white-space:nowrap;min-width:0}
+.sq-head .right .chip{white-space:nowrap}
+.sq-head .chip{background:rgba(255,255,255,.08);border:1px solid var(--header-btn-border);color:#fff}
+
+/* ---------- generic ---------- */
+.wrap{max-width:1100px;margin:0 auto;padding:22px 20px 60px}
+.card{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px}
+.card h2{margin:0 0 4px;font-size:19px}
+.card h3{margin:0 0 10px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-dark);border-bottom:2px solid var(--accent);display:inline-block;padding-bottom:3px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:9px 16px;font-weight:600;cursor:pointer;text-decoration:none;transition:filter .12s,transform .05s}
+.btn:hover{filter:brightness(.97)} .btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;filter:none;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent-dark);color:#fff}
+.btn.dark{background:var(--header-bg);border-color:#000;color:var(--header-ink)}
+.btn.gold{background:var(--gold);border-color:var(--gold-dark);color:#1f1608}
+.btn.ghost{background:transparent}
+.btn.big{font-size:19px;padding:14px 26px;border-radius:12px}
+.btn.sm{padding:5px 10px;font-size:13px;border-radius:7px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 11px;font-size:13px;font-weight:600;background:var(--gold-tint);border:1px solid var(--line);color:var(--ink)}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex:0 0 auto}
+input[type=text],input[type=number],select{border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:#fff;color:var(--ink);width:100%}
+input[type=text]:focus,select:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold-dark)}
+label.lbl{display:block;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin:12px 0 5px}
+.err{background:var(--bad-tint);border:1px solid var(--accent-tint-border);color:var(--accent-dark);border-radius:9px;padding:10px 12px;font-weight:600}
+.okbox{background:var(--ok-tint);border:1px solid #bfe0cb;color:#1f5a38;border-radius:9px;padding:10px 12px;font-weight:600}
+.warnbox{background:var(--warn-tint);border:1px solid var(--warn-border);color:var(--warn-ink);border-radius:9px;padding:10px 12px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(16px);background:var(--header-bg);color:#fff;padding:10px 18px;border-radius:9px;font-size:14px;opacity:0;transition:.22s;z-index:100;pointer-events:none;max-width:86vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.foot{text-align:center;font-size:12px;color:var(--mut);padding:18px}
+
+/* ---------- answer tiles (player + host) ---------- */
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ans{position:relative;display:flex;align-items:center;gap:14px;min-height:92px;border:none;border-radius:12px;padding:16px 18px;color:#fff;font-size:20px;font-weight:700;text-align:left;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.22);transition:transform .06s,filter .12s,opacity .2s}
+.ans:hover{filter:brightness(1.06)} .ans:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.22)}
+.ans:disabled{cursor:default}
+.ans.o0{background:var(--a0)} .ans.o1{background:var(--a1)} .ans.o2{background:var(--a2)} .ans.o3{background:var(--a3)}
+.ans .shape{flex:0 0 auto;width:38px;height:38px}
+.ans .key{position:absolute;right:10px;top:8px;font-size:12px;font-weight:700;opacity:.75;border:1px solid rgba(255,255,255,.6);border-radius:5px;padding:0 5px}
+.ans .txt{flex:1;line-height:1.25;word-break:break-word}
+.ans.sel{outline:5px solid var(--header-bg);outline-offset:2px}
+.ans.dim{opacity:.28}
+.ans.correct{outline:5px solid var(--gold);outline-offset:2px}
+.ans .tick{font-size:26px;margin-left:auto}
+.answers.tf .ans{min-height:110px}
+
+/* ---------- timer ---------- */
+.timerbar{height:10px;border-radius:99px;background:rgba(0,0,0,.08);overflow:hidden}
+.timerbar > i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--accent));border-radius:99px;transition:width .1s linear}
+.clock{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:var(--header-bg);color:var(--gold-bright);font-size:26px;font-weight:800;border:3px solid var(--gold)}
+.clock.low{background:var(--accent);color:#fff;border-color:var(--accent-dark)}
+
+/* ---------- leaderboard ---------- */
+.board{list-style:none;margin:0;padding:0}
+.board li{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:9px;margin-bottom:6px;background:var(--surface-2);border:1px solid var(--line-soft);font-weight:600}
+.board li .rk{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--header-bg);color:var(--gold-bright);font-size:14px;font-weight:800;flex:0 0 auto}
+.board li.me{background:var(--gold-tint);border-color:var(--gold)}
+.board li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board li .sc{font-variant-numeric:tabular-nums}
+.board li.p1 .rk{background:#c9a227;color:#1d1600}.board li.p2 .rk{background:#a7adb4;color:#14181c}.board li.p3 .rk{background:#b07a46;color:#1a0f05}
+.teambars .row{display:grid;grid-template-columns:130px 1fr 80px;align-items:center;gap:10px;margin:7px 0;font-weight:600}
+.teambars .bar{height:22px;border-radius:6px;background:rgba(0,0,0,.06);overflow:hidden}
+.teambars .bar > i{display:block;height:100%;border-radius:6px}
+.teambars .val{text-align:right;font-variant-numeric:tabular-nums}
+
+@media (max-width:640px){
+  .answers{grid-template-columns:1fr}
+  .ans{min-height:68px;font-size:18px}
+  .sq-head{padding:10px 12px;gap:8px} .brand-logo{padding:4px 7px} .brand-logo img{height:16px} .app-name{font-size:16px}
+  .sq-head .sq-title,#hdrName{display:none} .sq-head .right{gap:6px} .sq-head .right .chip{font-size:12px;padding:2px 9px}
+  .wrap{padding:14px 12px 40px}
+  .teambars .row{grid-template-columns:90px 1fr 60px}
+}

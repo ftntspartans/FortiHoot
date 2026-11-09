@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FortiHoot — Join</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cpath d=%22M32 3 58 13v18c0 15-11 25-26 30C17 56 6 46 6 31V13z%22 fill=%22%2317191d%22 stroke=%22%23cfa768%22 stroke-width=%224%22/%3E%3Cpath d=%22M20 22h24l-4 22H24z%22 fill=%22%23cc2027%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .pwrap{max-width:900px;margin:0 auto;padding:22px 18px 40px}
+  .joinbox{max-width:440px;margin:6vh auto 0}
+  .codein{font-size:34px;letter-spacing:8px;text-align:center;text-transform:uppercase;font-weight:800}
+  .center{text-align:center}
+  .qtop{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+  .qtop .qn{font-weight:800;color:var(--accent-dark);letter-spacing:.04em;text-transform:uppercase;font-size:13px}
+  .qtop .grow{flex:1}
+  .qcard{background:rgba(255,255,255,.93);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px}
+  .qtext{font-size:25px;font-weight:700;line-height:1.3;margin:0}
+  .qimg{display:block;max-width:100%;max-height:34vh;margin:12px auto 0;border-radius:10px}
+  .hint{font-size:12.5px;color:var(--mut);text-align:center;margin-top:10px}
+  .big{font-size:30px;font-weight:800;margin:6px 0}
+  .result{border-radius:14px;padding:22px;color:#fff;text-align:center;box-shadow:var(--shadow)}
+  .result.ok{background:var(--ok)} .result.no{background:var(--accent)} .result.none{background:#5b6470}
+  .result .pts{font-size:42px;font-weight:900}
+  .stat{display:flex;justify-content:center;gap:26px;margin-top:14px;flex-wrap:wrap}
+  .stat div{background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:12px;padding:10px 18px;text-align:center;min-width:120px}
+  .stat b{display:block;font-size:24px}
+  .pulse{animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .waitcard{max-width:520px;margin:8vh auto 0;text-align:center}
+  .teamchip{font-size:15px;padding:5px 14px}
+  .correctline{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-top:14px;font-weight:600}
+</style>
+</head>
+<body class="player spartan-bg">
+<header class="sq-head">
+  <span class="brand-logo"><img src="img/fortinet-logo.png" alt="Fortinet"></span>
+  <span class="app-name" data-app-name>FortiHoot</span>
+  <div class="right"><span id="hdrName"></span><span id="hdrTeam"></span><span id="hdrScore" class="chip hidden"></span></div>
+</header>
+
+<main class="pwrap">
+  <section id="s-loading" class="waitcard"><div class="card"><p class="pulse">Connecting…</p></div></section>
+
+  <section id="s-join" class="hidden joinbox">
+    <div class="card">
+      <h2>Join the game</h2>
+      <p class="muted small" style="margin-top:2px">Enter the 6-character code from your host.</p>
+      <label class="lbl" for="code">Game code</label>
+      <input id="code" type="text" class="codein mono" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123">
+      <label class="lbl" for="name">Your name</label>
+      <input id="name" type="text" maxlength="24" autocomplete="nickname" placeholder="First name + last initial">
+      <div id="joinErr" class="err hidden" style="margin-top:12px"></div>
+      <button id="joinBtn" class="btn primary big" style="width:100%;margin-top:16px">Join</button>
+    </div>
+  </section>
+
+  <section id="s-lobby" class="hidden waitcard">
+    <div class="card">
+      <p class="muted small" id="lobbyTitle" style="margin:0"></p>
+      <div class="big">You're in, <span id="lobbyName"></span>!</div>
+      <p id="lobbyTeam"></p>
+      <p class="pulse" style="font-weight:600">Waiting for the host to start…</p>
+      <p class="muted small" id="lobbyCount"></p>
+    </div>
+  </section>
+
+  <section id="s-question" class="hidden">
+    <div class="qtop">
+      <span class="qn" id="qNum"></span>
+      <div class="grow"><div class="timerbar"><i id="qBar" style="width:100%"></i></div></div>
+      <span class="clock" id="qClock">20</span>
+    </div>
+    <div class="qcard">
+      <p class="qtext" id="qText"></p>
+      <img id="qImg" class="qimg hidden" alt="">
+      <p class="muted small hidden" id="qMultiNote" style="margin:8px 0 0">Select every correct answer, then press Submit.</p>
+    </div>
+    <div id="qAnswers" class="answers"></div>
+    <div class="center hidden" id="qSubmitRow" style="margin-top:14px"><button id="qSubmit" class="btn dark big" disabled>Submit answer</button></div>
+    <p class="hint" id="qHint">Tip: press 1–4 on your keyboard to answer.</p>
+  </section>
+
+  <section id="s-answered" class="hidden waitcard">
+    <div class="card">
+      <div class="big" id="ansTitle">Answer locked in</div>
+      <p id="ansChoice" style="font-weight:600"></p>
+      <p class="pulse muted">Waiting for everyone else…</p>
+    </div>
+  </section>
+
+  <section id="s-reveal" class="hidden" style="max-width:620px;margin:4vh auto 0">
+    <div class="result" id="revBox"><div id="revTitle" class="big"></div><div class="pts" id="revPts"></div></div>
+    <div class="correctline" id="revCorrect"></div>
+    <div class="stat"><div><span class="muted small">Your score</span><b id="revTotal"></b></div><div><span class="muted small">Your place</span><b id="revRank"></b></div></div>
+    <p class="center muted small pulse" style="margin-top:16px">Next question coming up…</p>
+  </section>
+
+  <section id="s-board" class="hidden" style="max-width:620px;margin:3vh auto 0">
+    <div class="card">
+      <h3>Leaderboard</h3>
+      <ol class="board" id="bTop"></ol>
+      <p id="bMe" style="font-weight:700"></p>
+      <div id="bTeamsWrap" class="hidden"><h3 style="margin-top:12px">Teams</h3><div class="teambars" id="bTeams"></div></div>
+    </div>
+  </section>
+
+  <section id="s-ended" class="hidden" style="max-width:620px;margin:3vh auto 0">
+    <div class="card center">
+      <h3>Final results</h3>
+      <div class="big" id="endTitle"></div>
+      <div class="stat"><div><span class="muted small">Final score</span><b id="endScore"></b></div><div><span class="muted small">Final place</span><b id="endRank"></b></div></div>
+      <div id="endTeamWrap" class="hidden" style="text-align:left;margin-top:18px"><h3>Teams</h3><div class="teambars" id="endTeams"></div></div>
+      <p class="muted" style="margin-top:18px">Thanks for playing!</p>
+    </div>
+  </section>
+
+  <section id="s-msg" class="hidden waitcard"><div class="card"><div class="big" id="msgTitle"></div><p id="msgBody"></p><button class="btn" id="msgBtn">Join a game</button></div></section>
+</main>
+<div class="foot"><span data-app-name>FortiHoot</span> · v<span id="ver"></span></div>
+
+<script src="config.js"></script>
+<script type="module">
+import { openStore, SERVER_TIME, syncClock, errText } from "./js/store.js";
+import * as C from "./js/core.js";
+import { $, esc, fmt, ordinal, toast, show, SHAPES, brandHeader } from "./js/ui.js";
+
+const cfg = window.QUIZ_CONFIG || {};
+brandHeader(cfg);
+$("#ver").textContent = C.APP_VERSION;
+document.title = (cfg.appName || "FortiHoot") + " — Join";
+const SCREENS = ["s-loading", "s-join", "s-lobby", "s-question", "s-answered", "s-reveal", "s-board", "s-ended", "s-msg"];
+const LS_KEY = "sq.player";
+
+const S = { store: null, uid: null, gameId: null, code: null, team: null, name: "", game: null, offset: 0,
+  unsubGame: null, unsubMe: null, everSeenMe: false, tick: null, answered: {}, picked: [], renderedQ: -1, lastStatus: null };
+
+function teamOf(id) { return (S.game?.teams || []).find(t => t.id === id) || null; }
+function teamChip(id) { const t = teamOf(id); return t ? `<span class="chip teamchip"><span class="dot" style="background:${esc(t.color)}"></span>Team ${esc(t.name)}</span>` : ""; }
+function message(title, body, showBtn = true) { $("#msgTitle").textContent = title; $("#msgBody").textContent = body; $("#msgBtn").classList.toggle("hidden", !showBtn); show("s-msg", SCREENS); }
+function saveLocal() { localStorage.setItem(LS_KEY, JSON.stringify({ gameId: S.gameId, code: S.code, name: S.name })); }
+function clearLocal() { localStorage.removeItem(LS_KEY); }
+
+async function boot() {
+  try { S.store = await openStore(cfg); }
+  catch (e) { message("Not set up yet", errText(e), false); return; }
+  const params = new URLSearchParams(location.search);
+  const urlCode = C.normalizeCode(params.get("code") || "");
+  let saved = null; try { saved = JSON.parse(localStorage.getItem(LS_KEY) || "null"); } catch {}
+  // Coming back to the same game (refresh, closed tab, laptop slept)?
+  if (saved && saved.gameId && (!urlCode || urlCode === saved.code)) {
+    try {
+      const me = await S.store.ready();
+      if (me) {
+        S.uid = me.uid;
+        const p = await S.store.get(`games/${saved.gameId}/players/${me.uid}`);
+        const g = p && await S.store.get(`games/${saved.gameId}`);
+        if (p && g && g.status !== "ended") { await enterGame(saved.gameId, p, true); return; }
+      }
+    } catch (e) { console.warn("resume failed", e); }
+    clearLocal();
+  }
+  $("#code").value = urlCode || (saved && saved.code) || "";
+  $("#name").value = (saved && saved.name) || "";
+  show("s-join", SCREENS);
+  (urlCode ? $("#name") : $("#code")).focus();
+}
+
+async function join() {
+  const err = $("#joinErr"); err.classList.add("hidden");
+  const code = C.normalizeCode($("#code").value), name = C.cleanName($("#name").value);
+  const fail = m => { err.textContent = m; err.classList.remove("hidden"); $("#joinBtn").disabled = false; };
+  if (!C.isValidCode(code)) return fail("Codes are 6 characters, letters and numbers (no O, I, L, 0 or 1).");
+  if (!name) return fail("Enter your name.");
+  $("#joinBtn").disabled = true;
+  try {
+    S.uid = await S.store.signInPlayer();
+    const c = await S.store.get(`codes/${code}`);
+    if (!c || !c.active) return fail("That code isn't active. Check it with your host.");
+    const g = await S.store.get(`games/${c.game}`);
+    if (!g || g.status === "ended") return fail("That game has ended.");
+    const existing = await S.store.get(`games/${c.game}/players/${S.uid}`);
+    if (existing) { S.code = code; S.name = existing.name; await enterGame(c.game, existing, true); return; }
+    if (g.status !== "lobby" && !g.settings?.lateJoin) return fail("This game has already started and isn't taking late joins.");
+    if (g.banned && g.banned[S.uid]) return fail("The host removed you from this game.");
+    const path = `games/${c.game}/players/${S.uid}`;
+    const data = { name, team: c.team ?? null, code, joinedAt: SERVER_TIME };
+    S.offset = await syncClock(S.store, path, "joinedAt", () => S.store.set(path, data));
+    S.code = code; S.name = name;
+    await enterGame(c.game, { name, team: c.team ?? null, code }, false);
+  } catch (e) {
+    console.error(e);
+    fail(e.code === "permission-denied" ? "Couldn't join — the game may have started or the code was closed." : errText(e));
+  }
+}
+
+async function enterGame(gameId, me, resumed) {
+  S.gameId = gameId; S.team = me.team ?? null; S.name = me.name; S.code = me.code || S.code;
+  saveLocal();
+  $("#hdrName").textContent = S.name;
+  if (resumed) {
+    const path = `games/${gameId}/players/${S.uid}`;
+    try { S.offset = await syncClock(S.store, path, "seen", () => S.store.update(path, { seen: SERVER_TIME })); } catch (e) { console.warn("clock sync", e); }
+  }
+  S.unsubMe = S.store.watch(`games/${gameId}/players/${S.uid}`, d => {
+    if (d) { S.everSeenMe = true; return; }
+    if (S.everSeenMe) { cleanup(); clearLocal(); message("Removed from the game", "The host removed you from this game."); }
+  }, e => console.warn(e));
+  S.unsubGame = S.store.watch(`games/${gameId}`, g => { if (!g) { cleanup(); clearLocal(); message("Game closed", "The host closed this game."); return; } S.game = g; render(); },
+    e => { message("Connection problem", errText(e)); });
+}
+function cleanup() { S.unsubGame && S.unsubGame(); S.unsubMe && S.unsubMe(); clearInterval(S.tick); S.unsubGame = S.unsubMe = null; }
+
+function myScore() { return (S.game?.scores || {})[S.uid] || null; }
+function renderHeaderScore() {
+  const sc = myScore(), el = $("#hdrScore");
+  if (sc) { el.textContent = fmt(sc[0]) + " pts"; el.classList.remove("hidden"); } else el.classList.add("hidden");
+  $("#hdrTeam").innerHTML = teamChip(S.team);
+}
+
+function render() {
+  const g = S.game;
+  renderHeaderScore();
+  if (g.status !== "question") clearInterval(S.tick);
+  if (g.status === "lobby") {
+    $("#lobbyTitle").textContent = g.title || "";
+    $("#lobbyName").textContent = S.name;
+    $("#lobbyTeam").innerHTML = teamChip(S.team);
+    $("#lobbyCount").textContent = g.playerCount ? `${fmt(g.playerCount)} player${g.playerCount === 1 ? "" : "s"} joined` : "";
+    show("s-lobby", SCREENS);
+  } else if (g.status === "question") renderQuestion();
+  else if (g.status === "reveal") renderReveal();
+  else if (g.status === "board") renderBoard();
+  else if (g.status === "ended") { renderEnded(); clearLocal(); }
+  S.lastStatus = g.status;
+}
+
+function remaining() { return C.remainingMs(S.game.qStart, S.game.q.time, S.offset); }
+
+async function renderQuestion() {
+  const g = S.game, i = g.qIndex, q = g.q;
+  if (!q) return;
+  if (S.answered[i] === undefined) {
+    // after a refresh, ask the server whether this player already answered
+    S.answered[i] = null;
+    try { const a = await S.store.get(`games/${S.gameId}/answers/${i}_${S.uid}`); if (a) S.answered[i] = a.c; } catch {}
+    if (S.game.qIndex !== i || S.game.status !== "question") return;
+  }
+  if (S.answered[i]) { showAnswered(i); return; }
+  if (S.renderedQ !== i) {
+    S.renderedQ = i; S.picked = [];
+    $("#qNum").textContent = `Question ${i + 1} of ${g.qCount}`;
+    $("#qText").textContent = q.text;
+    const img = $("#qImg");
+    if (q.image) { img.src = q.image; img.classList.remove("hidden"); } else { img.removeAttribute("src"); img.classList.add("hidden"); }
+    const box = $("#qAnswers");
+    box.className = "answers" + (q.type === "tf" ? " tf" : "");
+    box.innerHTML = q.options.map((o, oi) => `<button class="ans o${oi}" data-i="${oi}">${SHAPES[oi]}<span class="txt">${esc(o)}</span><span class="key">${oi + 1}</span></button>`).join("");
+    box.querySelectorAll(".ans").forEach(b => b.addEventListener("click", () => pick(Number(b.dataset.i))));
+    const multi = q.type === "multi";
+    $("#qMultiNote").classList.toggle("hidden", !multi);
+    $("#qSubmitRow").classList.toggle("hidden", !multi);
+    $("#qSubmit").disabled = true;
+    $("#qHint").textContent = multi ? "Tip: press 1–4 to toggle, Enter to submit." : `Tip: press 1–${q.options.length} on your keyboard to answer.`;
+  }
+  show("s-question", SCREENS);
+  clearInterval(S.tick);
+  const step = () => {
+    const ms = remaining(), T = q.time * 1000;
+    const secs = Math.max(0, Math.ceil(ms / 1000));
+    $("#qClock").textContent = secs;
+    $("#qClock").classList.toggle("low", secs <= 5);
+    $("#qBar").style.width = Math.max(0, Math.min(100, (ms / T) * 100)) + "%";
+    if (ms <= 0) { clearInterval(S.tick); timeUp(i); }
+  };
+  step(); S.tick = setInterval(step, 100);
+}
+
+function timeUp(i) {
+  if (S.answered[i] || S.game.qIndex !== i) return;
+  $("#ansTitle").textContent = "Time's up!";
+  $("#ansChoice").textContent = "No answer this round.";
+  show("s-answered", SCREENS);
+}
+
+function pick(oi) {
+  const g = S.game, q = g.q;
+  if (g.status !== "question" || S.answered[g.qIndex] || remaining() <= 0) return;
+  if (q.type === "multi") {
+    S.picked = S.picked.includes(oi) ? S.picked.filter(x => x !== oi) : [...S.picked, oi];
+    document.querySelectorAll("#qAnswers .ans").forEach(b => b.classList.toggle("sel", S.picked.includes(Number(b.dataset.i))));
+    $("#qSubmit").disabled = !S.picked.length;
+  } else submit([oi]);
+}
+
+async function submit(choice) {
+  const g = S.game, i = g.qIndex;
+  if (S.answered[i] || !choice.length) return;
+  S.answered[i] = choice.slice().sort((a, b) => a - b);
+  clearInterval(S.tick);
+  showAnswered(i);
+  try {
+    await S.store.set(`games/${S.gameId}/answers/${i}_${S.uid}`, { u: S.uid, q: i, c: S.answered[i], at: SERVER_TIME });
+  } catch (e) {
+    console.warn(e);
+    if (e.code === "permission-denied") { $("#ansTitle").textContent = "Too late"; $("#ansChoice").textContent = "Time ran out before your answer reached the server."; }
+    else { S.answered[i] = null; toast(errText(e)); renderQuestion(); }
+  }
+}
+function showAnswered(i) {
+  const q = S.game.q, c = S.answered[i] || [];
+  $("#ansTitle").textContent = "Answer locked in";
+  $("#ansChoice").innerHTML = c.map(ci => `${C.LETTERS[ci]}: ${esc(q.options[ci])}`).join("<br>");
+  show("s-answered", SCREENS);
+}
+
+function correctText() {
+  const g = S.game, q = g.q, r = g.reveal;
+  if (!q || !r) return "";
+  return (r.correct.length > 1 ? "Correct answers: " : "Correct answer: ") + r.correct.map(ci => `${C.LETTERS[ci]} — ${q.options[ci]}`).join(", ");
+}
+function renderReveal() {
+  const sc = myScore(), i = S.game.qIndex;
+  const box = $("#revBox");
+  const outcome = sc ? sc[3] : -1;
+  box.className = "result " + (outcome === 1 ? "ok" : outcome === 0 ? "no" : "none");
+  $("#revTitle").textContent = outcome === 1 ? "Correct!" : outcome === 0 ? "Not quite" : (S.answered[i] ? "Answer arrived too late" : "No answer");
+  $("#revPts").textContent = outcome === 1 ? "+" + fmt(sc[1]) : "+0";
+  $("#revCorrect").textContent = correctText();
+  $("#revTotal").textContent = sc ? fmt(sc[0]) : "0";
+  const total = S.game.board?.total || S.game.playerCount || 0;
+  $("#revRank").textContent = sc ? `${ordinal(sc[2])}${total ? " of " + fmt(total) : ""}` : "—";
+  show("s-reveal", SCREENS);
+}
+function teamBars(el, teams) {
+  const max = Math.max(1, ...teams.map(t => t.s));
+  el.innerHTML = teams.map(t => `<div class="row"><span><span class="dot" style="background:${esc(t.c)}"></span> ${esc(t.n)}</span><div class="bar"><i style="width:${Math.round((t.s / max) * 100)}%;background:${esc(t.c)}"></i></div><span class="val">${fmt(t.s)}</span></div>`).join("");
+}
+function renderBoard() {
+  const b = S.game.board || { top: [], teams: [] }, sc = myScore();
+  $("#bTop").innerHTML = b.top.slice(0, 5).map(p => `<li class="p${p.r}${sc && p.r === sc[2] && p.n === S.name ? " me" : ""}"><span class="rk">${p.r}</span><span class="nm">${esc(p.n)}</span><span class="sc">${fmt(p.s)}</span></li>`).join("");
+  $("#bMe").textContent = sc ? `You: ${ordinal(sc[2])} place · ${fmt(sc[0])} points` : "";
+  const teams = S.game.mode === "teams" && b.teams && b.teams.length;
+  $("#bTeamsWrap").classList.toggle("hidden", !teams);
+  if (teams) teamBars($("#bTeams"), b.teams);
+  show("s-board", SCREENS);
+}
+function renderEnded() {
+  const sc = myScore(), b = S.game.board || { teams: [] };
+  const rank = sc ? sc[2] : null;
+  $("#endTitle").textContent = rank === 1 ? "You won! 🏆" : rank && rank <= 3 ? `You finished ${ordinal(rank)}!` : "Game over";
+  $("#endScore").textContent = sc ? fmt(sc[0]) : "0";
+  $("#endRank").textContent = rank ? `${ordinal(rank)} of ${fmt(b.total || 0)}` : "—";
+  const teams = S.game.mode === "teams" && b.teams && b.teams.length;
+  $("#endTeamWrap").classList.toggle("hidden", !teams);
+  if (teams) teamBars($("#endTeams"), b.teams);
+  show("s-ended", SCREENS);
+}
+
+document.addEventListener("keydown", e => {
+  if (!S.game || S.game.status !== "question" || $("#s-question").classList.contains("hidden")) return;
+  if (e.target && e.target.tagName === "INPUT") return;
+  const n = Number(e.key);
+  if (n >= 1 && n <= (S.game.q?.options.length || 0)) { e.preventDefault(); pick(n - 1); }
+  else if ((e.key === "Enter") && S.game.q?.type === "multi" && S.picked.length) submit(S.picked);
+  else { const L = String(e.key).toUpperCase(); const li = C.LETTERS.indexOf(L); if (li >= 0 && li < (S.game.q?.options.length || 0)) { e.preventDefault(); pick(li); } }
+});
+$("#qSubmit").addEventListener("click", () => submit(S.picked));
+$("#joinBtn").addEventListener("click", join);
+$("#name").addEventListener("keydown", e => { if (e.key === "Enter") join(); });
+$("#code").addEventListener("keydown", e => { if (e.key === "Enter") $("#name").focus(); });
+$("#code").addEventListener("input", e => { const v = C.normalizeCode(e.target.value); if (v !== e.target.value) e.target.value = v; });
+$("#msgBtn").addEventListener("click", () => { location.href = location.pathname; });
+boot();
+</script>
+</body>
+</html>
